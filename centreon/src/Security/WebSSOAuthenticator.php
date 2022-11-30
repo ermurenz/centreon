@@ -18,35 +18,50 @@
  * For more information : contact@centreon.com
  *
  */
+declare(strict_types=1);
 
-namespace EventSubscriber;
+namespace Security;
 
-use Pimple\Container;
+use Centreon;
 use Centreon\Domain\Contact\Contact;
-use Symfony\Component\Security\Core\Security;
-use Symfony\Component\HttpKernel\KernelEvents;
-use Security\Domain\Authentication\Model\Session;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Security\Domain\Authentication\Model\ProviderToken;
 use Centreon\Domain\Contact\Interfaces\ContactInterface;
-use Centreon\Domain\Option\Interfaces\OptionServiceInterface;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Centreon\Infrastructure\Service\Exception\NotFoundException;
-use Core\Security\Domain\Authentication\AuthenticationException;
 use Centreon\Domain\Contact\Interfaces\ContactRepositoryInterface;
 use Centreon\Domain\Log\LoggerTrait;
+use Centreon\Domain\Option\Interfaces\OptionServiceInterface;
 use Centreon\Domain\Repository\Interfaces\DataStorageEngineInterface;
-use Security\Domain\Authentication\Interfaces\SessionRepositoryInterface;
-use Security\Domain\Authentication\Interfaces\AuthenticationServiceInterface;
-use Core\Security\Domain\ProviderConfiguration\WebSSO\Model\WebSSOConfiguration;
-use Security\Domain\Authentication\Interfaces\AuthenticationRepositoryInterface;
+use Centreon\Infrastructure\Service\Exception\NotFoundException;
+use Core\Infrastructure\Common\Api\HttpUrlTrait;
 use Core\Security\Application\ProviderConfiguration\WebSSO\Repository\ReadWebSSOConfigurationRepositoryInterface;
 use Core\Security\Domain\Authentication\SSOAuthenticationException;
+use Core\Security\Domain\ProviderConfiguration\WebSSO\Model\WebSSOConfiguration;
+use DateInterval;
+use DateTime;
+use Exception;
+use Pimple\Container;
+use Security\Domain\Authentication\Interfaces\AuthenticationRepositoryInterface;
+use Security\Domain\Authentication\Interfaces\AuthenticationServiceInterface;
+use Security\Domain\Authentication\Interfaces\SessionRepositoryInterface;
+use Security\Domain\Authentication\Model\ProviderToken;
+use Security\Domain\Authentication\Model\Session;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Exception\AuthenticationException as SfAuthenticationException;
+use Core\Security\Domain\Authentication\AuthenticationException;
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\Security\Http\Authenticator\AbstractAuthenticator;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
+use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
 
-class WebSSOEventSubscriber implements EventSubscriberInterface
+/**
+ * Class used to authenticate a request by using a session id.
+ *
+ * @package Security
+ */
+class WebSSOAuthenticator extends AbstractAuthenticator
 {
+    use HttpUrlTrait;
     use LoggerTrait;
 
     /**
@@ -73,43 +88,51 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
         private AuthenticationRepositoryInterface $authenticationRepository,
         private Security $security,
     ) {
+
     }
 
     /**
      * @inheritDoc
      */
-    public static function getSubscribedEvents(): array
+    public function supports(Request $request): bool
     {
-        $events = [];
-        //Register this event only if its not an upgrade or fresh install
-//        if (
-//            file_exists(_CENTREON_ETC_ . DIRECTORY_SEPARATOR . 'centreon.conf.php')
-//            && ! is_dir(_CENTREON_PATH_ . DIRECTORY_SEPARATOR . 'www'  . DIRECTORY_SEPARATOR . 'install')
-//        ) {
-//            $events = [
-//                KernelEvents::REQUEST => [
-//                    ['loginWebSSOUser', 34]
-//                ],
-//            ];
-//        }
-        return $events;
+        if ($request->headers->has('X-Auth-Token')) {
+            return false;
+        }
+
+        $configuration = $this->findWebSSOConfigurationOrFail();
+        $sessionId = $request->getSession()->getId();
+        $isValidToken = $this->authenticationService->isValidToken($sessionId);
+
+        return !$isValidToken && $configuration->isActive();
     }
 
     /**
-     * login User with Web SSO
-     *
-     * @param RequestEvent $event
-     * @throws SSOAuthenticationException
-     * @throws NotFoundException
-     * @throws \InvalidArgumentException
-     * @throws AuthenticationException
+     * @inheritDoc
      */
-    public function loginWebSSOUser(RequestEvent $event): void
+    public function onAuthenticationFailure(Request $request, SfAuthenticationException $exception): ?Response
     {
-        if ($this->security->getUser() === null) {
-            $request = $event->getRequest();
-            $webSSOConfiguration = $this->findWebSSOConfigurationOrFail();
-            if ($webSSOConfiguration->isActive()) {
+        $this->info(sprintf("WebSSO authentication failed: %s\n", $exception->getMessage()));
+        throw SSOAuthenticationException::withMessageAndCode($exception->getMessage(), $exception->getCode());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $providerKey): ?Response
+    {
+        return null;
+    }
+
+    /**
+     * @param Request $request
+     * @return SelfValidatingPassport
+     */
+    public function authenticate(Request $request): SelfValidatingPassport
+    {
+        try {
+            if ($this->security->getUser() === null) {
+                $webSSOConfiguration = $this->findWebSSOConfigurationOrFail();
                 $this->info('Starting authentication with WebSSO');
                 $this->validateIpIsAllowToConnect($request->getClientIp(), $webSSOConfiguration);
                 $this->validateLoginAttributeOrFail($webSSOConfiguration);
@@ -122,11 +145,27 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
                 $this->createSession($user, $request);
                 $sessionId = $this->session->getId();
                 $request->headers->set('Set-Cookie', "PHPSESSID=" . $sessionId);
-                $this->createTokenIfNotExist($sessionId, $webSSOConfiguration->getId(), $user, $request->getClientIp());
+                $this->createTokenIfNotExist(
+                    $sessionId,
+                    $webSSOConfiguration->getId(),
+                    $user,
+                    $request->getClientIp()
+                );
                 $this->info('Authenticated successfully', [
                     'user' => $user->getAlias()
                 ]);
+
+                return new SelfValidatingPassport(
+                    new UserBadge(
+                        $request->getSession()->getId(),
+                        function () use ($user) {
+                            return $user;
+                        }
+                    )
+                );
             }
+        } catch (SSOAuthenticationException $exception) {
+            throw new SfAuthenticationException($exception->getMessage(), $exception->getCode());
         }
     }
 
@@ -198,7 +237,7 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
      * Validate that login attribute is defined in server environment variables
      *
      * @param WebSSOConfiguration $webSSOConfiguration
-     * @throws \InvalidArgumentException
+     * @throws SSOAuthenticationException
      */
     private function validateLoginAttributeOrFail(WebSSOConfiguration $webSSOConfiguration): void
     {
@@ -207,7 +246,8 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
             $this->error('login header attribute not found in server environment server', [
                 'login_header_attribute' => $webSSOConfiguration->getLoginHeaderAttribute()
             ]);
-            throw new \InvalidArgumentException('Missing Login Attribute');
+
+            throw SSOAuthenticationException::missingRemoteLoginAttribute();
         }
     }
 
@@ -258,7 +298,7 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
             'reach_api_rt' => $user->hasAccessToApiRealTime() ? 1 : 0,
             'contact_theme' => $user->getTheme() ?? 'light'
         ];
-        $centreonSession = new \Centreon($sessionUserInfos);
+        $centreonSession = new Centreon($sessionUserInfos);
         $request->getSession()->start();
         $request->getSession()->set('centreon', $centreonSession);
         $_SESSION['centreon'] = $centreonSession;
@@ -284,12 +324,12 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
         );
         if ($authenticationTokens === null) {
             $sessionExpireOption = $this->optionService->findSelectedOptions(['session_expire']);
-            $sessionExpirationDelay = (int) $sessionExpireOption[0]->getValue();
+            $sessionExpirationDelay = (int)$sessionExpireOption[0]->getValue();
             $token = new ProviderToken(
                 $webSSOConfigurationId,
                 $sessionId,
-                new \DateTime(),
-                (new \DateTime())->add(new \DateInterval('PT' . $sessionExpirationDelay . 'M'))
+                new DateTime(),
+                (new DateTime())->add(new DateInterval('PT' . $sessionExpirationDelay . 'M'))
             );
             $this->createAuthenticationTokens(
                 $sessionId,
@@ -309,7 +349,7 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
      * @param ProviderToken $providerToken
      * @param ProviderToken|null $providerRefreshToken
      * @param string|null $clientIp
-     * @throws AuthenticationException
+     * @throws \Core\Security\Domain\Authentication\AuthenticationException
      */
     private function createAuthenticationTokens(
         string $sessionToken,
@@ -317,7 +357,8 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
         ProviderToken $providerToken,
         ?ProviderToken $providerRefreshToken,
         ?string $clientIp,
-    ): void {
+    ): void
+    {
         $isAlreadyInTransaction = $this->dataStorageEngine->isAlreadyinTransaction();
 
         if (!$isAlreadyInTransaction) {
@@ -336,7 +377,7 @@ class WebSSOEventSubscriber implements EventSubscriberInterface
             if (!$isAlreadyInTransaction) {
                 $this->dataStorageEngine->commitTransaction();
             }
-        } catch (\Exception $ex) {
+        } catch (Exception $ex) {
             $this->error('Unable to create authentication tokens', [
                 'trace' => $ex->getTraceAsString()
             ]);

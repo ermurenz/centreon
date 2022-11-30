@@ -84,7 +84,8 @@ class SessionAPIAuthenticator extends AbstractAuthenticator
      */
     public function supports(Request $request): bool
     {
-        return $request->headers->has('Cookie') && $request->cookies->has('PHPSESSID');
+        return $request->headers->has('Cookie') && $request->cookies->has('PHPSESSID') &&
+            !$request->headers->has('X-Auth-Token');
     }
 
     /**
