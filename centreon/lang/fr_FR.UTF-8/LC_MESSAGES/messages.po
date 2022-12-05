@@ -17229,3 +17229,12 @@ msgstr "Catégorie d'hôte introuvable"
 
 msgid "Error while deleting host category"
 msgstr "Erreur lors de la suppression d'une catégorie d'hôte"
+
+msgid "You are not allowed to create host categories"
+msgstr "Vous n'êtes pas autorisé à créer des catégories d'hôtes"
+
+msgid "Host category name already exists"
+msgstr "Nom de catégorie d'hôte déjà existant"
+
+msgid "Error while creating host category"
+msgstr "Erreur lors de la création d'une catégorie d'hôte"
