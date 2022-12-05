@@ -15846,3 +15846,12 @@ msgstr "Você não salvou as alterações, deseja continuar?"
 
 #  msgid "Error while deleting host category"
 #  msgstr ""
+
+#  msgid "You are not allowed to create host categories"
+#  msgstr ""
+
+#  msgid "Host category name already exists"
+#  msgstr ""
+
+#  msgid "Error while creating host category"
+#  msgstr ""
