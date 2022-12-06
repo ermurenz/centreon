@@ -4,7 +4,7 @@ info:
   description: |
     # New features
     + Added vault configuration endpoints
-    + Added host categories endpoint (DELETE)
+    + Added host categories endpoints (DELETE, POST)
     +
     # Updated features
     + Updated host categories endpoint (GET)
