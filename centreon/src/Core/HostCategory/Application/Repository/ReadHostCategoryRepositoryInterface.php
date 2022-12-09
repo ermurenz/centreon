@@ -67,20 +67,12 @@ interface ReadHostCategoryRepositoryInterface
      */
     public function existsByAccessGroups(int $hostCategoryId, array $accessGroups): bool;
 
-    /*
-     * Find a host category by id
-     *
-     * @param int $hostCategoryId
-     * @return HostCategory|null
-     */
-    public function findById(int $hostCategoryId): ?HostCategory;
-
     /**
-     * Find a host category by id and access groups
+     * Check existance of a host category by name
      *
-     * @param int $hostCategoryId
-     * @param AccessGroup[] $accessGroups
-     * @return HostCategory|null
+     * @param string $hostCategoryName
+     * @return bool
+     * @throws \Throwable
      */
-    public function findByIdAndAccessGroups(int $hostCategoryId, array $accessGroups): ?HostCategory;
+    public function existsByName(string $hostCategoryName): bool;
 }
