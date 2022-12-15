@@ -17214,3 +17214,21 @@ msgstr "Le fournisseur de coffre-fort n'existe pas"
 
 msgid "Event queues maximum total size"
 msgstr "Taille maximale de l’ensemble des queues d'évènements"
+
+msgid "Error when deleting the time period %d"
+msgstr "Erreur lors de la suppression de la période de temps %d"
+
+msgid "Error when updating the time period %d"
+msgstr "Erreur lors de la mise à jour de la période de temps %d"
+
+msgid "Error when adding the time period"
+msgstr "Erreur lors de l'ajout de la période de temps"
+
+msgid "Error when searching for time periods"
+msgstr "Erreur lors de la recherche de périodes de temps"
+
+msgid "Error when searching for the time period %d"
+msgstr "Erreur lors de la recherche de la période de temps %d"
+
+msgid "The time period name '%s' already exists"
+msgstr "Le nom de la période de temps '%s' existe déjà"
