@@ -85,6 +85,7 @@ Then(
 Given(
   'an administrator configuring a Centreon platform and an existing user account',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'user', preserveToken: false })
       .wait('@getNavigationList')
       .isInProfileMenu('Edit profile')
@@ -96,6 +97,7 @@ Given(
 When(
   'the administrator sets a valid password length and sets all the letter cases',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'admin', preserveToken: false })
       .wait('@getNavigationList')
       .navigateTo({
@@ -131,6 +133,7 @@ When(
 Then(
   'the existing user can not define a password that does not match the password case policy defined by the administrator and is notified about it',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'user', preserveToken: false })
       .wait('@getNavigationList')
       .isInProfileMenu('Edit profile')
@@ -163,6 +166,7 @@ Then(
 Given(
   'an administrator configuring a Centreon platform and an existing user account with password up to date',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'admin', preserveToken: true }).wait(
       '@getNavigationList'
     );
@@ -202,6 +206,7 @@ When(
 );
 
 Then('the existing user can not authenticate and is notified about it', () => {
+  cy.visit(`${Cypress.config().baseUrl}`);
   cy.loginByTypeOfUser({ jsonName: 'user', preserveToken: false })
     .url()
     .should('include', '/reset-password');
@@ -221,6 +226,7 @@ Then('the existing user can not authenticate and is notified about it', () => {
 Given(
   'an administrator configuring a Centreon platform and an existing user account with a first password',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'admin', preserveToken: true }).wait(
       '@getNavigationList'
     );
@@ -260,6 +266,7 @@ When(
 );
 
 Then('user can not change password unless the minimum time has passed', () => {
+  cy.visit(`${Cypress.config().baseUrl}`);
   cy.loginByTypeOfUser({ jsonName: 'user', preserveToken: true })
     .wait('@getNavigationList')
     .isInProfileMenu('Edit profile')
@@ -350,6 +357,7 @@ Then('user can not reuse the last passwords more than 3 times', () => {
 });
 
 Given('an existing password policy configuration and 2 non admin users', () => {
+  cy.visit(`${Cypress.config().baseUrl}`);
   cy.loginByTypeOfUser({ jsonName: 'admin', preserveToken: true }).wait(
     '@getNavigationList'
   );
@@ -403,6 +411,7 @@ When(
 );
 
 Then('the password expiration policy is applied to the removed user', () => {
+  cy.visit(`${Cypress.config().baseUrl}`);
   cy.loginByTypeOfUser({ jsonName: 'user', preserveToken: false })
     .url()
     .should('include', '/reset-password');
@@ -427,6 +436,7 @@ Then(
 Given(
   'an administrator configuring a Centreon platform and an existing user account not blocked',
   () => {
+    cy.visit(`${Cypress.config().baseUrl}`);
     cy.loginByTypeOfUser({ jsonName: 'admin', preserveToken: true }).wait(
       '@getNavigationList'
     );
@@ -456,6 +466,7 @@ When(
 );
 
 Then('the user is locked after reaching the number of allowed attempts', () => {
+  cy.visit(`${Cypress.config().baseUrl}`);
   cy.loginByTypeOfUser({
     jsonName: 'user-non-admin-with-wrong-password',
     preserveToken: false
