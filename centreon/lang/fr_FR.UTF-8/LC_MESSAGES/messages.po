@@ -17214,3 +17214,9 @@ msgstr "Le fournisseur de coffre-fort n'existe pas"
 
 msgid "Event queues maximum total size"
 msgstr "Taille maximale de l’ensemble des queues d'évènements"
+
+msgid "Error while searching for host groups"
+msgstr "Erreur durant la recherche de groupes d'hôtes"
+
+msgid "You are not allowed to access host groups"
+msgstr "Vous n'êtes pas autorisé à accéder aux groupes d'hôtes"
