@@ -17,6 +17,13 @@ before(() => {
   );
 });
 
+beforeEach(() => {
+  cy.intercept({
+    method: 'POST',
+    url: '/centreon/api/latest/authentication/providers/configurations/local'
+  }).as('getLoginResponse');
+});
+
 Then('the unhandled problems filter is selected', (): void => {
   cy.contains('Unhandled problems');
 });
@@ -50,10 +57,12 @@ Then(
 );
 
 Given('a saved custom filter', () => {
-  cy.visit(`${Cypress.config().baseUrl}`).loginByTypeOfUser({
-    jsonName: 'admin',
-    preserveToken: true
-  });
+  cy.visit(`${Cypress.config().baseUrl}`)
+    .loginByTypeOfUser({
+      jsonName: 'admin',
+      preserveToken: true
+    })
+    .wait('@getLoginResponse');
   cy.get(stateFilterContainer).click();
   cy.contains('OK services').should('exist');
 });
