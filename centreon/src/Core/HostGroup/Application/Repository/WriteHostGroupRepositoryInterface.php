@@ -21,22 +21,18 @@
 
 declare(strict_types=1);
 
-namespace Core\HostGroup\Application\Exceptions;
+namespace Core\HostGroup\Application\Repository;
 
-class HostGroupException extends \Exception
+use Centreon\Domain\RequestParameters\Interfaces\RequestParametersInterface;
+use Core\HostGroup\Domain\Model\HostGroup;
+use Core\Security\AccessGroup\Domain\Model\AccessGroup;
+
+interface WriteHostGroupRepositoryInterface
 {
-    public static function accessNotAllowed(): self
-    {
-        return new self(_('You are not allowed to access host groups'));
-    }
-
-    public static function errorWhileSearching(): self
-    {
-        return new self(_('Error while searching for host groups'));
-    }
-
-    public static function errorWhileDeleting(): self
-    {
-        return new self(_('Error while deleting a host group'));
-    }
+    /**
+     * Delete a host group.
+     *
+     * @param int $hostGroupId
+     */
+    public function deleteHostGroup(int $hostGroupId): void;
 }
