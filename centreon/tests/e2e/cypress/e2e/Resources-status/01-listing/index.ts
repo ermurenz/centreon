@@ -6,14 +6,14 @@ import {
   stateFilterContainer,
   setUserFilter,
   deleteUserFilter,
-  tearDownResource,
+  tearDownResource
 } from '../common';
 
 before(() => {
   insertResourceFixtures().then(() =>
     cy
       .fixture('resources/filters.json')
-      .then((filters) => setUserFilter(filters)),
+      .then((filters) => setUserFilter(filters))
   );
 });
 
@@ -22,6 +22,10 @@ beforeEach(() => {
     method: 'POST',
     url: '/centreon/api/latest/authentication/providers/configurations/local'
   }).as('getLoginResponse');
+  cy.intercept({
+    method: 'GET',
+    url: '/centreon/api/latest/users/filters/events-view?page=1&limit=100'
+  }).as('apiFilterResources');
 });
 
 Then('the unhandled problems filter is selected', (): void => {
@@ -53,7 +57,7 @@ Then(
     cy.contains('1-2 of 2');
     cy.contains('service_test_dt');
     cy.contains('service_test_ok');
-  },
+  }
 );
 
 Given('a saved custom filter', () => {
@@ -62,7 +66,7 @@ Given('a saved custom filter', () => {
       jsonName: 'admin',
       preserveToken: true
     })
-    .wait('@getLoginResponse');
+    .wait('@apiFilterResources');
   cy.get(stateFilterContainer).click();
   cy.contains('OK services').should('exist');
 });
@@ -76,7 +80,7 @@ Then(
   () => {
     cy.contains('1-1 of 1');
     cy.contains('service_test_ok');
-  },
+  }
 );
 
 after(() => {
